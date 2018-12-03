@@ -1,0 +1,68 @@
+val dual = Seq("X").toDF("dummy")
+dual.printSchema
+dual.select("dummy").show
+dual.select(col("dummy")).show
+dual.select($"dummy").show
+
+val orders = spark.read.json("/Users/itversity/Research/data/retail_db_json/orders")
+orders.select("order_id").show
+
+//Below operation will look for column by name order_id2 and it will fail
+//as our data frame does not have column with that name
+orders.select("order_id" + 2).show
+
+//This will add 2 to each value in order_id
+orders.select(col("order_id") + 2).show
+
+orders.select(upper($"order_status")).show
+orders.select(lower($"order_status")).show
+orders.select(initcap($"order_status")).show
+
+String Manipulation Functions
+Case conversion functions – lower, upper, initcap
+Trim functions – trim, rtrim, ltrim
+Padding functions – lpad, rpad
+Typecasting – we can use Hive function cast as part of selectExpr to change the data type of data to its original type (eg: date might be string, but we can extract year part and convert into integer)
+getting length
+Extracting data from fixed length records – substring
+Extracting data from variable length records – split
+
+
+val orders = spark.read.json("/Users/itversity/Research/data/retail_db_json/orders")
+orders.select("order_id").show
+
+// case conversion
+orders.select(upper($"order_status")).show
+orders.select(lower($"order_status")).show
+orders.select(initcap($"order_status")).show
+
+// trimming unnecessary characters
+val dual = Seq("          X       ").toDF("dummy")
+dual.select(trim($"dummy")).show
+dual.select(length(trim($"dummy"))).show
+dual.select(trim($"dummy", " ")).show
+
+val dual = Seq(7).toDF("dummy")
+dual.select(lpad($"dummy", 2, "0")).show
+
+val dual = Seq(10).toDF("dummy")
+dual.select(lpad($"dummy", 2, "0")).show
+
+
+val orders = spark.read.json("/Users/itversity/Research/data/retail_db_json/orders")
+orders.select(substring($"order_date", 1, 4)).show
+
+orders.selectExpr("cast(substr(order_date, 1, 4) as int)").show
+orders.withColumn("order_year", expr("cast(substr(order_date, 1, 4) as int)")).show
+
+
+Date Manipulation Functions
+Data arithmetic – date_add, date_sub, datediff, next_day, last_day, months_between, add_months
+Getting first of the month or year – trunc
+Extracting information – dayofmonth, dayofyear, dayofweek, year, month
+Formatting date – date_format
+Using withColumn
+We can use withColumn to transform data of a particular column within a Data Frame without impacting other columns.
+
+Using selectExpr
+selectExpr for advanced transformations like case when.
