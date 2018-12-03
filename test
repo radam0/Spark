@@ -1,0 +1,119 @@
+//Import spark related libraries
+import org.apache.spark.sql.hive.orc._
+import org.apache.spark.sql._
+import org.apache.spark.SparkConf
+import org.apache.spark.sql.SparkSession
+import org.apache.spark.SparkContext
+
+//Import utility libraries
+import java.io.FileInputStream
+import java.util.Properties
+
+import java.text.SimpleDateFormat
+import java.util.{Calendar, Date}
+
+import org.apache.log4j.{Level, Logger}
+			
+object DailyTableAudit {
+	
+	def today(): String = 
+		{
+			val date = new Date
+			val sdf = new SimpleDateFormat("yyyy-MM-dd HH:MM:SS")
+			sdf.format(date)
+		}
+		
+	def main(args: Array[String]) {
+	 try
+		{
+			println("Begin")
+			val TabDrop = args(0)
+			val sourceSchemaName = args(1)
+			val targetSchemaName = args(2)	
+			val TabCondition = args(3)
+			var BlLoadId =args(4)
+			println(TabDrop)
+			println(sourceSchemaName)
+			println(TabCondition)
+			var MaxBlLoadId : String=null
+			
+			val sparkConfig = new SparkConf().setAppName("Copy from tgt to tgt_incremental").setMaster("local").set("spark.sql.crossJoin.enabled", "true")
+
+			val sparkSession = SparkSession.builder.master("local").appName("tgt_TgtBkp_tableAudit").enableHiveSupport().config(sparkConfig).getOrCreate()
+			
+				val spark: SparkSession = SparkSession.builder.master("local").getOrCreate	
+				val sc = spark.sparkContext
+				val sqlContext = new org.apache.spark.sql.SQLContext(sc)
+				import sqlContext.implicits._
+				println("After spark initialization")
+			
+			
+			if (BlLoadId=="null")
+			{
+				print("inside MaxBlLoadId")
+				MaxBlLoadId=sparkSession.sqlContext.sql(s"select value from hdpc3bl_apps.C3BL_ETL_CONFIG_TAB_RPT where key='BL_LOAD_ID'").collect().map(x=>x(0)).toList(0).toString
+				print("MaxBlLoadId")
+				print(MaxBlLoadId)
+			}
+			else
+			{
+				MaxBlLoadId=BlLoadId
+			}
+			
+			val tab1=sparkSession.sqlContext.sql(s"SELECT tablename FROM hdpc3bl_tgt.XXC3BL_AUDIT_TABLE_DETAILS A where a.auditcondition='$TabCondition'");
+			val tab = sc.parallelize(tab1.collect).map(row => (row.getString(0)));
+			println("tabdata")
+			
+			if(targetSchemaName=="null")
+			{
+				println("inside If")
+				println(MaxBlLoadId)
+				tab.collect().map { p =>
+									  try { 
+									  val SRdd=sparkSession.sqlContext.sql(s"SELECT bl_load_id FROM $sourceSchemaName.$p").count
+									  val BlRDD=sparkSession.sqlContext.sql(s"SELECT 1 FROM $sourceSchemaName.$p where bl_load_id='$MaxBlLoadId'").count()
+									  println(s"Table Name :$p ,scount : $SRdd, BlLoadId:$MaxBlLoadId, BLLoadCount :$BlRDD, sourceSchemaName:$sourceSchemaName ")
+									  sparkSession.sql(s"insert into table hdpc3bl_tgt.XXTAB_AUDIT_COUNT  values ('$p' ,'$SRdd','$sourceSchemaName','$MaxBlLoadId','$BlRDD','$today')")
+									  } catch {
+										case e : Exception =>
+										println(s"Exception table name :$p :Exception : $e")
+									  }
+									}
+			}
+			else
+			{
+				println("else this is test program")
+				
+				val rep=tab.collect().map(t =>(
+				t,spark.sqlContext.sql(s"SELECT 1 FROM $sourceSchemaName.$t where 1=1").count(),spark.sqlContext.sql(s"SELECT 1 FROM $targetSchemaName.$t where 1=1").count(),today()))
+				println("else before DF")
+			
+				val df=sc.parallelize(rep).toDF("TableName","SourceCount","TargetCount","CountTakenDate").createOrReplaceTempView("TableAuditCount")
+				println("after df")
+			
+				if (TabDrop=="DROP")
+				{
+					spark.sql("DROP TABLE IF EXISTS hdpc3bl_tgt.XXTAB_TGTBKP_AUDIT_COUNT PURGE")
+					spark.sql("CREATE TABLE hdpc3bl_tgt.XXTAB_TGTBKP_AUDIT_COUNT AS SELECT * FROM TableAuditCount")
+				}
+				else
+				{
+					sparkSession.sql("insert into table hdpc3bl_tgt.XXTAB_AUDIT_COUNT select t.* from (SELECT * FROM TableAuditCount) t")
+				}
+			}	
+		}
+		catch 
+			{
+			case e : Exception =>println(s"Main Exception : $e")
+			}
+		finally
+			{
+			println("Audit Completed")
+			}
+	}
+}
+ =======================
+val df=sc.parallelize(rep).toDF("TableName","SourceCount","TargetCount","CountTakenDate").createOrReplaceTempView("TableAuditCount")
+
+ this statement create view with DF data
+ spark.sql("CREATE TABLE hdpc3bl_tgt.XXTAB_TGTBKP_AUDIT_COUNT AS SELECT * FROM TableAuditCount")
