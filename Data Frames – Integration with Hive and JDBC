@@ -1,0 +1,47 @@
+// Reading data from hive table using dataframe API
+spark.read.table("bootcampdemo_retail_db_txt.orders01")
+val orders = spark.read.table("bootcampdemo_retail_db_txt.orders01")
+orders.show
+
+// Reading data from hive table using spark sql
+val orders = spark.sql("select * from bootcampdemo_retail_db_txt.orders01")
+orders.printSchema
+orders.show
+
+// Reading data from mysql table using jdbc
+// We need to launch spark session with mysql connector jar registered
+// This works with spark 1.6.2
+/*
+spark-shell \
+  --master yarn \
+  --conf spark.ui.port=12901 \
+  --jars /usr/share/java/mysql-connector-java.jar \
+  --driver-class-path /usr/share/java/mysql-connector-java.jar 
+*/
+val connectionProperties = new java.util.Properties()
+connectionProperties.put("user", "retail_user")
+connectionProperties.put("password", "itversity")
+sqlContext.
+  read.
+  jdbc("jdbc:mysql://ms.itversity.com:3306/retail_db", "orders", connectionProperties).
+  show
+
+// Alternative approach to read data over JDBC
+sqlContext.read.format("jdbc").
+  option("url", "jdbc:mysql://ms.itversity.com/retail_db").
+  option("dbtable", "orders").
+  option("user", "retail_user").
+  option("password", "itversity).show
+// read.format can be used to read JSON or other file formats as well
+// 1.6.2 using sqlContext
+sqlContext.
+  read.
+  format("json").
+  load("/public/retail_db_json/orders").
+  show
+// Spark 2.x
+spark.
+  read.
+  format("json").
+  load("/public/retail_db_json/orders").
+  show
