@@ -1,0 +1,78 @@
+ val DF1 = Seq(
+  (8, "bat"),
+  (64, "mouse"),
+  (-27, "horse"),
+  (30,"Masquitio")
+).toDF("number", "word")
+
+val DF2 = Seq(
+  (8, "bat"),
+  (64, "mouse"),
+  (-27, "horse")
+).toDF("number", "word")
+
+import org.apache.spark.sql.DataFrame
+def DFCountValidate(DF1: DataFrame,DF2: DataFrame): Int = {
+  if (DF1.count == DF2.count)
+  {return (0)}
+  else
+  {return(1)}
+}
+
+
+################################################################################################################
+import org.apache.spark.sql.DataFrame
+import org.apache.spark.sql.hive.orc._
+import org.apache.spark.sql._
+import org.apache.spark.SparkConf
+import org.apache.spark.sql.SparkSession
+def DFCountValidate(validateType : String ,DF1: DataFrame, DF2: DataFrame,oraTab :String,Htable :String): Long = {
+
+val sparkConfig = new SparkConf().setAppName("TableAuditCounts").setMaster("local").set("spark.sql.crossJoin.enabled", "true")
+
+val sparkSession = SparkSession.builder.master("local").appName("TableAuditCountsApp").enableHiveSupport().config(sparkConfig).getOrCreate()
+
+if (validateType == "DF")
+{
+  if (DF1.count == DF2.count)
+  {return (0)}
+  else
+  {return(1)}
+ }
+else
+  {   
+  val opts = Map(
+  "url" -> "jdbc:oracle:thin:@",
+  "user" -> "username",
+  "password" -> "password")
+  
+val df = spark.
+  read.
+  format("jdbc").
+  options(opts).
+  option("dbtable", s"(select * from $oraTab )").load()
+
+  val HiveTabCount=sparkSession.sqlContext.sql(s"SELECT 1 FROM $Htable");
+
+	return(HiveTabCount.count);
+  }
+}
+
+
+===========Testing=======================
+val DF1 = Seq(
+  (8, "bat"),
+  (64, "mouse"),
+  (-27, "horse"),
+  (30,"Masquitio")
+).toDF("number", "word")
+
+val DF2 = Seq(
+  (8, "bat"),
+  (64, "mouse"),
+  (-27, "horse")
+).toDF("number", "word")
+  
+val testdf = DFCountValidate("Tab",DF1,DF2,"EMP","tv_retaildb.customers")
+
+val testdf = DFCountValidate("DF",DF1,DF2,"EMP","tv_retaildb.customers")
