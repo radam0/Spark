@@ -76,3 +76,32 @@ val DF2 = Seq(
 val testdf = DFCountValidate("Tab",DF1,DF2,"EMP","tv_retaildb.customers")
 
 val testdf = DFCountValidate("DF",DF1,DF2,"EMP","tv_retaildb.customers")
+
+
+
+######################################3
+
+nohup /opt/mapr/spark/spark-2.2.1/bin/spark-submit \
+--class com.cisco.c3bl.fact.driver.PrimaryFactsDriver1 \
+--master yarn \
+--deploy-mode cluster \
+--num-executors 100 \
+--executor-memory 10G \
+--files /opt/mapr/spark/spark-2.2.1/conf/hive-site.xml \
+--conf spark.driver.memory=8G \
+--conf spark.driver.am.memory=8G \
+--conf spark.yarn.am.memoryOverhead=4096 \
+--conf spark.yarn.am.cores=2 \
+--conf spark.shuffle.compress=true \
+--conf spark.network.timeout=30000s \
+--conf spark.executor.heartbeatInterval=16000s \
+--conf spark.sql.broadcastTimeout=1900 \
+--conf spark.shuffle.spill.compress=true \
+--conf spark.sql.inMemoryColumnarStorage.compressed=true \
+--conf spark.sql.inMemoryColumnarStorage.batchSize=10000 \
+--conf spark.sql.shuffle.partitions=100 \
+--conf spark.sql.tungsten.enabled=true \
+--driver-java-options -Dlog4j.configuration=file:log4j.properties \
+--conf spark.sql.autoBroadcastJoinThreshold=-1 \
+--executor-cores 3 \
+/users/hdpc3bl/apps/c3bl/c3bl_2.11-1.0.jar > tgt_P_fact1.txt
