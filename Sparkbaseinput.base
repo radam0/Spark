@@ -1,0 +1,23 @@
+import org.apache.spark.sql.SQLContext;
+val scon = new SQLContext(sc)
+val opts = Map(
+  "url" -> "jdbc:oracle:thin:@",
+  "user" -> "XXITEMHU",
+  "password" -> "Xl5Q1K")
+
+val df = spark.
+  read.
+  format("jdbc").
+  options(opts).
+  option("dbtable", s"(select * from TabName)").load()
+df.count()
+df.createOrReplaceTempView("my_df_view");
+spark.sql("drop table if exists hdpc3bl_work.xxDF_table_count");
+spark.sql("create table hdpc3bl_work.xxDF_table_count as select * from my_df_view");
+
+val HiveTabCount=scon.sql(s"SELECT 1 FROm hdpc3bl_work.xxDF_table_count");
+
+if (HiveTabCount.count == df.count())
+{
+println("counts are matching")
+}
