@@ -1,0 +1,103 @@
+ =================Alphabet validate
+[10/01, 12:00 PM] Venu T: die() {
+  echo 'o%s\n' "$1"
+  exit 1
+}
+event_type=$1
+case $event_type in
+  ("") die "Can't be empty";;
+  ([![:alpha:]]) die "contains non-alphabetical characters";;
+  (*) echo OK
+esac
+ ===============
+ ==============Sqoop=======
+
+
+ sqoop import --connect "jdbc:mysql://quickstart.cloudera:3306/vdb" \
+--username root \
+--password=cloudera \
+--split-by empno \
+--append \
+--target-dir /user/cloudera/sqoopdata/emp_data_incr \
+--fields-terminated-by '\t' \
+--query 'select * from emp where empno > 8001 AND $CONDITIONS'
+
+
+ ==================
+ --Full Load
+sqoop import --connect jdbc:oracle:thin:@lnxdbcj-pts-505.cisco.com:1804/TS3CG11 \
+--table HDP_ORDERS_HEADERS  \
+--username XXITEMHUB  \
+--password Xl5Q1t9K \
+--columns ORDER_ID,ORDER_DATE,ORDER_CUSTOMER_ID,ORDER_STATUS \
+--split-by order_id \
+--hive-database tv_retaildb  \
+--hive-table HDP_ORDERS_HEADERS_INCR2 \
+--target-dir /app/hdpc3bl/HIVE/WAREHOUSE/tv_retaildb.db/HDP_ORDERS_HEADERS_INCR2 \
+--create-hive-table \
+--fields-terminated-by '\t' \
+--hive-import \
+--num-mappers 1 \
+--as-parquetfile
+
+
+
+ ===========incrt
+----------- -incr
+sqoop import --connect jdbc:oracle:thin:@lnxdbcj-pts-505.cisco.com:1804/TS3CG11 \
+--table HDP_ORDERS_HEADERS  \
+--username XXITEMHUB  \
+--password Xl5Q1t9K \
+--columns ORDER_ID,ORDER_DATE,ORDER_CUSTOMER_ID,ORDER_STATUS \
+--append \
+--split-by order_id \
+--check-column ORDER_DATE \
+--hive-table HDP_ORDERS_HEADERS_EXT \
+--hive-database tv_retaildb \
+--last-value 2018-10-13 \
+--incremental lastmodified \
+--fields-terminated-by '\t' \
+--target-dir /app/hdpc3bl/HIVE/WAREHOUSE/tv_retaildb.db/hdp_orders_headers_ext \
+--as-parquetfile \
+--num-mappers 4
+
+
+
+: ==============rNGE
+ --============================Creat HIve table with import data from RDBMS for Specific range data
+sqoop import --connect jdbc:oracle:thin:@lnxdbcj-pts-505.cisco.com:1804/TS3CG11 \
+--table HDP_ORDERS_HEADERS  \
+--username XXITEMHUB  \
+--password Xl5Q1t9K \
+--columns ORDER_ID,ORDER_DATE,ORDER_CUSTOMER_ID,ORDER_STATUS \
+--append \
+--split-by ORDER_ID \
+--fields-terminated-by '\t' \
+--where "order_date >= ADD_MONTHS(SYSDATE,-2)" \
+--target-dir /app/hdpc3bl/HIVE/WAREHOUSE/tv_retaildb.db/HDP_ORDERS_HEADERS_TB3 \
+--create-hive-table \
+--hive-table HDP_ORDERS_HEADERS_TB3 \
+--hive-database tv_retaildb \
+--fields-terminated-by '\t'
+
+
+--=====================================apend data to existing hive table for (incrementa load) given condition
+--date incremental
+sqoop import --connect jdbc:oracle:thin:@lnxdbcj-pts-505.cisco.com:1804/TS3CG11 \
+--table hdp_orders  \
+--username XXITEMHUB  \
+--password Xl5Q1t9K \
+--columns ORDER_ID,ORDER_DATE,ORDER_CUSTOMER_ID,ORDER_STATUS \
+--append \
+--split-by order_id \
+--check-column ORDER_DATE \
+--hive-table emp_data_incr \
+--hive-database tv_retaildb \
+--last-value 2018-09-09 \
+--incremental lastmodified \
+--fields-terminated-by '\t' \
+--target-dir /app/hdpc3bl/HIVE/WAREHOUSE/tv_retaildb.db/hdp_customers_data_incr
+
+
+
+ http://dwgeek.com/impala-hive-slowly-changing-dimension-scd-type-2.html/
